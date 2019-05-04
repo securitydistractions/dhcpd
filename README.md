@@ -1,2 +1,6 @@
 # dhcpd
-Parse dhcpd logs into Elastic
+Parse Linux dhcpd logs into Elastic.
+
+Blogpost at 
+
+
