@@ -21,7 +21,7 @@ filter {
 		{
 			grok{
 				match => { 
-					"params" => "%{WORD:action} %{GREEDYDATA:params2}" 
+					"params" => "%{WORD:[event][action]} %{GREEDYDATA:params2}" 
 						}
 			}
 			if "_grokparsefailure"	 not in [tags]
@@ -30,10 +30,10 @@ filter {
 					match => { 
 						"params2" => 
 						[
-							"from %{IP:clientip} via %{IPORHOST:interface}" ,
-							"to %{IP:clientip} \(%{MAC:macaddr}\) via %{IPORHOST:interface}" ,
-							"from %{MAC:macaddr} (\(%{DATA:clienthost}\) )?via %{IPORHOST:interface}(: %{GREEDYDATA:infomsg})?" ,
-							"on %{IP:clientip} to %{MAC:macaddr} \(%{DATA:clienthost}\) via %{IPORHOST:interface}" ,
+							"from %{IP:[source][ip]} via %{IPORHOST:interface}" ,
+							"to %{IP:[source][ip]} \(%{MAC:[source][mac]}\) via %{IPORHOST:interface}" ,
+							"from %{MAC:[source][mac]} (\(%{DATA:clienthost}\) )?via %{IPORHOST:interface}(: %{GREEDYDATA:infomsg})?" ,
+							"on %{IP:[source][ip]} to %{MAC:[source][mac]} \(%{DATA:clienthost}\) via %{IPORHOST:interface}" ,
 							"pool %{WORD:poolid} %{DATA:subnet}  total %{INT:pooltotal}  free %{INT:poolfree}  backup %{INT:poolbackup}  lts %{INT:poollts}  max-own \(\+\/\-\)%{INT:poolmaxown}",
 							"pool %{WORD:poolid} %{DATA:subnet}  total %{INT:pooltotal}  free %{INT:poolfree}  backup %{INT:poolbackup}  lts %{INT:poollts}  max-misbal %{INT:poolmaxmisbal}"
 						]
@@ -43,9 +43,15 @@ filter {
 		}
 		if "_grokparsefailure"	 not in [tags]
 		{
-			mutate {
-			    remove_field => [ "message", "params2", "params" ]
+			date {
+				match => [ "timestamp",  "MMM  d HH:mm:ss", "MMM dd HH:mm:ss", "ISO8601" ]
 			}
+			mutate {
+			    remove_field => [ "message", "params2", "params", "timestamp" ]
+				add_field => { "[ecs][version]" => "ecs-1.0.0" }
+				 rename => { "logsource" => "[observer][host]"  }
+			}
+			
 		}
 	
 		
