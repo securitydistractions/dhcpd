@@ -1,0 +1,62 @@
+input {
+
+  stdin {
+    id => "my_plugin_id"
+  }
+ 
+}
+
+ 
+
+filter {
+
+	if [message] =~ /dhcpd:/
+	{
+		grok{
+			match => { 
+				"message" => "%{SYSLOGBASE} %{GREEDYDATA:params}" 
+					}
+		}
+		if "_grokparsefailure"	 not in [tags]
+		{
+			grok{
+				match => { 
+					"params" => "%{WORD:action} %{GREEDYDATA:params2}" 
+						}
+			}
+			if "_grokparsefailure"	 not in [tags]
+			{
+				grok{
+					match => { 
+						"params2" => 
+						[
+							"from %{IP:clientip} via %{IPORHOST:interface}" ,
+							"to %{IP:clientip} \(%{MAC:macaddr}\) via %{IPORHOST:interface}" ,
+							"from %{MAC:macaddr} (\(%{DATA:clienthost}\) )?via %{IPORHOST:interface}(: %{GREEDYDATA:infomsg})?" ,
+							"on %{IP:clientip} to %{MAC:macaddr} \(%{DATA:clienthost}\) via %{IPORHOST:interface}" ,
+							"pool %{WORD:poolid} %{DATA:subnet}  total %{INT:pooltotal}  free %{INT:poolfree}  backup %{INT:poolbackup}  lts %{INT:poollts}  max-own \(\+\/\-\)%{INT:poolmaxown}",
+							"pool %{WORD:poolid} %{DATA:subnet}  total %{INT:pooltotal}  free %{INT:poolfree}  backup %{INT:poolbackup}  lts %{INT:poollts}  max-misbal %{INT:poolmaxmisbal}"
+						]
+							}
+				}
+			}
+		}
+		if "_grokparsefailure"	 not in [tags]
+		{
+			mutate {
+			    remove_field => [ "message", "params2", "params" ]
+			}
+		}
+	
+		
+	}
+  
+}  
+ 
+
+output {
+
+  stdout { codec => rubydebug }
+  
+  
+}
